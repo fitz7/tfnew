@@ -1,0 +1,23 @@
+{
+  "plugins": {
+    "commit-analyzer": {
+      "name": "github:faceit/commit-analyzer-regex",
+      "options": {
+        "minor": "feat",
+        "patch": "build|ci|fix|perf|refactor|test|chore"
+      }
+    },
+    "changelog-generator": {
+      "name": "default",
+      "options": {
+        "emojis": "true"
+      }
+    },
+    "provider": {
+      "name": "github",
+      "options": {
+        "slug": "fitz7/tfnew"
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+linters:
+  enable:
+    - errorlint
+    - forbidigo
+    - gocritic
+    - goconst
+    - gocyclo
+    - gofumpt
+    - goimports
+    - misspell
+    - revive
+    - unconvert
+    - unparam
+    - wastedassign
+
+linters-settings:
+  gocyclo:
+    min-complexity: 12
+  gofumpt:
+    extra-rules: true
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
