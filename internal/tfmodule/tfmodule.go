@@ -93,9 +93,11 @@ func addTerraformBlock(body *hclwrite.Body, cmo CreateModuleOptions) error {
 		return err
 	}
 
-	err = addBackendBlock(cmo, terraformBody)
-	if err != nil {
-		return err
+	if cmo.RootModule {
+		err = addBackendBlock(cmo, terraformBody)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = addRequiredProvidersBlock(cmo, terraformBody)
@@ -126,18 +128,23 @@ func addBackendBlock(cmo CreateModuleOptions, terraformBody *hclwrite.Body) erro
 
 	switch cmo.BackendType {
 	case "gcs":
+		// get the backendConfig from the config file
 		backendConfig := viper.GetStringMap(fmt.Sprintf("backend.%s", cmo.BackendType))
+		// fill in any missing keys
+		keys := []string{"prefix", "bucket"}
+		for _, key := range keys {
+			backendConfig[key] = viper.Get(fmt.Sprintf("backend.%s.%s", cmo.BackendType, key))
+		}
 
+		// if there is no prefix we just use the name
 		if prefix, ok := backendConfig["prefix"]; !ok || prefix == nil || prefix == "" {
 			backendConfig["prefix"] = cmo.Name
 		} else {
-			oldPrefix := backendConfig["prefix"]
-			backendConfig["prefix"] = fmt.Sprintf("%s/%s", oldPrefix, cmo.Name)
+			backendConfig["prefix"] = fmt.Sprintf("%s/%s", prefix, cmo.Name)
 		}
 
 		writeTerraformFromAnyMap(backendConfig, backendBody)
 	case "local":
-		backendBody := terraformBody.AppendNewBlock("backend", []string{cmo.BackendType}).Body()
 		backendBody.SetAttributeValue("path", cty.StringVal("./terraform.tfstate"))
 	default:
 		return errors.New("backend not implemented")
@@ -146,7 +153,7 @@ func addBackendBlock(cmo CreateModuleOptions, terraformBody *hclwrite.Body) erro
 	return nil
 }
 
-func writeTerraformFromAnyMap(anyMap map[string]any, backendBody *hclwrite.Body) {
+func writeTerraformFromAnyMap(anyMap map[string]interface{}, backendBody *hclwrite.Body) {
 	for key, value := range anyMap {
 		switch typedVal := value.(type) {
 		case string:
@@ -154,7 +161,7 @@ func writeTerraformFromAnyMap(anyMap map[string]any, backendBody *hclwrite.Body)
 		case bool:
 			backendBody.SetAttributeValue(key, cty.BoolVal(typedVal))
 		//	gcs doesn't have any nested config, but we'll include it here anyway as a POC
-		case map[string]any:
+		case map[string]interface{}:
 			newBody := backendBody.AppendNewBlock(key, []string{}).Body()
 			writeTerraformFromAnyMap(typedVal, newBody)
 		}
@@ -162,6 +169,10 @@ func writeTerraformFromAnyMap(anyMap map[string]any, backendBody *hclwrite.Body)
 }
 
 func addRequiredProvidersBlock(cmo CreateModuleOptions, body *hclwrite.Body) error {
+	if len(cmo.RequiredProviders) == 0 {
+		return nil
+	}
+
 	requiredProvidersBody := body.AppendNewBlock("required_providers", []string{}).Body()
 
 	for _, provider := range cmo.RequiredProviders {
