@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -47,7 +46,7 @@ func init() {
 
 	// gcs backend flags
 	rootCmd.PersistentFlags().String("backend_gcs_bucket", "", "the bucket to use for your gcs backend")
-	rootCmd.PersistentFlags().String("backend_gcs_prefix", "", "the root prefix to use for your gcs backend (default is ''")
+	rootCmd.PersistentFlags().String("backend_gcs_prefix", "", "the root prefix to use for your gcs backend (default is '')")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -70,9 +69,7 @@ func initConfig() {
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	}
+	_ = viper.ReadInConfig()
 
 	// the backend dependant bindings are done here so that the file created by init is not polluted with backend types that are not relevant
 	backendBindings()
@@ -86,7 +83,7 @@ func backendBindings() {
 		_ = viper.BindPFlag("backend.local.path", rootCmd.PersistentFlags().Lookup("backend_local_path"))
 	case "gcs":
 		_ = viper.BindPFlag("backend.gcs.bucket", rootCmd.PersistentFlags().Lookup("backend_gcs_bucket"))
-		_ = viper.BindPFlag("backend.gcs.prefix", rootCmd.PersistentFlags().Lookup("backend_gcs_root_prefix"))
+		_ = viper.BindPFlag("backend.gcs.prefix", rootCmd.PersistentFlags().Lookup("backend_gcs_prefix"))
 	case "s3", "remote", "azurerm", "consul", "cos", "http", "kubernetes", "oss", "pg", "cloud":
 		log.Fatalf("backend %s not implemented", backendType)
 	}
