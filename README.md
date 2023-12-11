@@ -2,7 +2,7 @@
 
 tfnew is a small cli tool for generating new terraform modules in a fairly opinionated way
 
-## installation
+## Installation
 
 ### bash
 
@@ -16,7 +16,7 @@ curl -fsSL https://raw.githubusercontent.com/fitz7/tfnew/main/install.sh | bash
 go install gitub.com/fitz7/tfnew@latest
 ```
 
-## usage
+## Usage
 
 ### init
 
@@ -24,7 +24,7 @@ This step is optional in using `tfnew` as all the args are also supported by `tf
 
 `tfnew init` will create a `.tfnew.yaml` file in the root of your project directory (wherever the .git folder is)
 
-#### default behaviour
+#### Default behaviour
 
 ```shell
 tfnew init
@@ -32,7 +32,7 @@ tfnew init
 
 By default, `tfnew init` specifies a local backend and a local `terraform.tfstate` file.
 
-#### specifying a backend
+#### Specifying a backend
 
 currently the only other supported backend is `gcs`
 
@@ -61,9 +61,9 @@ terraform {
 }
 ```
 
-#### create a new root module
+#### Create a new root module
 
-A root module will be generated with a backend block to store the root modules state it will also set the required terraform version to the latest minor version
+A root module will be generated with a backend block to store the root modules state. It will also set the required terraform version to the latest minor version
 
 ```shell
 tfnew module root-module --root
@@ -79,7 +79,7 @@ terraform {
 }
 ```
 
-#### creating modules with required_providers
+#### Creating modules with required_providers
 
 required_providers must be referenced by their source and are also generated with their latest minor version
 
