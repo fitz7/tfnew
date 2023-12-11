@@ -51,6 +51,5 @@ jobs:
           bin: ./bin/semantic-release
           hooks: goreleaser
           allow-initial-development-versions: true
-          args: --allow-initial-development-versions --allow-no-changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
