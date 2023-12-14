@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -14,9 +15,9 @@ import (
 	"github.com/fitz7/tfnew/internal/releases"
 )
 
-const versionsFile = "versions.tf"
+const VersionsFile = "versions.tf"
 
-var defaultFilenames = []string{versionsFile, "variables.tf", "output.tf", "main.tf"}
+var defaultFilenames = []string{VersionsFile, "variables.tf", "output.tf", "main.tf"}
 
 type CreateModuleOptions struct {
 	Name              string
@@ -26,34 +27,18 @@ type CreateModuleOptions struct {
 	BackendType       string
 }
 
-func CreateModule(cmo CreateModuleOptions) error {
+func CreateModuleDir(cmo CreateModuleOptions) (string, error) {
 	fullPathWithModuleName := fmt.Sprintf("%s/%s", fsutils.FindProjectRootDir(), cmo.Name)
 
 	err := os.Mkdir(fullPathWithModuleName, 0o755)
 	if err != nil {
-		return fmt.Errorf("error creating directory: %w", err)
+		return "", fmt.Errorf("error creating directory: %w", err)
 	}
 
-	defaultFiles, err := createDefaultModuleFiles(fullPathWithModuleName)
-	if err != nil {
-		return fmt.Errorf("error creating moduleName files: %w", err)
-	}
-
-	defer func() {
-		for _, file := range defaultFiles {
-			_ = file.Close()
-		}
-	}()
-
-	err = populateVersionsFile(defaultFiles[versionsFile], cmo)
-	if err != nil {
-		return fmt.Errorf("error populating the versions.tf file: %w", err)
-	}
-
-	return nil
+	return fullPathWithModuleName, nil
 }
 
-func createDefaultModuleFiles(path string) (map[string]*os.File, error) {
+func CreateDefaultModuleFiles(path string) (map[string]*os.File, error) {
 	defaultFiles := make(map[string]*os.File)
 
 	for _, filename := range defaultFilenames {
@@ -68,7 +53,7 @@ func createDefaultModuleFiles(path string) (map[string]*os.File, error) {
 	return defaultFiles, nil
 }
 
-func populateVersionsFile(versionsFile *os.File, cmo CreateModuleOptions) error {
+func PopulateVersionsFile(versionsFile *os.File, cmo CreateModuleOptions) error {
 	f := hclwrite.NewEmptyFile()
 	body := f.Body()
 
@@ -176,24 +161,17 @@ func addRequiredProvidersBlock(cmo CreateModuleOptions, body *hclwrite.Body) err
 	requiredProvidersBody := body.AppendNewBlock("required_providers", []string{}).Body()
 
 	for _, provider := range cmo.RequiredProviders {
-		latestProviderRelease, err := releases.GetLatestProviderRelease(provider)
+		latestProviderData, err := releases.GetLatestProviderRelease(provider)
 		if err != nil {
 			return err
 		}
 
-		providerName, ok := latestProviderRelease["name"].(string)
-		if !ok {
-			return fmt.Errorf("could not find name for provider: %s", provider)
+		minorProviderVersion, err := truncatePatchVersion(latestProviderData.Version)
+		if err != nil {
+			return fmt.Errorf("%s provider version for: %s", latestProviderData.Name, err.Error())
 		}
 
-		latestProviderVersion, ok := latestProviderRelease["version"].(string)
-		if !ok {
-			return fmt.Errorf("could not find version for provider: %s", provider)
-		}
-
-		minorProviderVersion := truncatePatchVersion(latestProviderVersion)
-
-		requiredProvidersBody.SetAttributeValue(providerName, cty.ObjectVal(map[string]cty.Value{
+		requiredProvidersBody.SetAttributeValue(latestProviderData.Name, cty.ObjectVal(map[string]cty.Value{
 			"source":  cty.StringVal(provider),
 			"version": cty.StringVal(fmt.Sprintf("~> %s", minorProviderVersion)),
 		}))
@@ -214,12 +192,10 @@ func getTerraformVersion(rootModule bool) (string, error) {
 			return "", errors.New("failed to fetch terraform version")
 		}
 
-		latestTerraformVersion, ok := latestTerraformRelease["version"].(string)
-		if !ok {
-			return "", err
+		minorTerraformVersion, err := truncatePatchVersion(latestTerraformRelease.Version)
+		if err != nil {
+			return "", fmt.Errorf("terraform %s", err.Error())
 		}
-
-		minorTerraformVersion := truncatePatchVersion(latestTerraformVersion)
 
 		terraformVersion = fmt.Sprintf("~> %s", minorTerraformVersion)
 	}
@@ -227,6 +203,10 @@ func getTerraformVersion(rootModule bool) (string, error) {
 	return terraformVersion, nil
 }
 
-func truncatePatchVersion(version string) string {
-	return strings.Join(strings.Split(version, ".")[:2], ".")
+func truncatePatchVersion(version string) (string, error) {
+	versionMatch := regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
+	if !versionMatch.MatchString(version) {
+		return "", errors.New("version returned is not valid semver")
+	}
+	return strings.Join(strings.Split(version, ".")[:2], "."), nil
 }
