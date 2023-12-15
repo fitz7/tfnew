@@ -26,7 +26,6 @@ func GetLatestProviderRelease(provider string) (*ProviderData, error) {
 	}
 
 	return &providerData, nil
-
 }
 
 func GetLatestTerraformRelease() (*TerraformData, error) {
