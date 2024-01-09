@@ -17,7 +17,7 @@ import (
 
 const VersionsFile = "versions.tf"
 
-var defaultFilenames = []string{VersionsFile, "variables.tf", "output.tf", "main.tf"}
+var defaultFilenames = []string{versionsFile, "variables.tf", "outputs.tf", "main.tf"}
 
 type CreateModuleOptions struct {
 	Name              string
