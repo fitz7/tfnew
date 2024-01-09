@@ -1,12 +1,11 @@
 package releases
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 )
 
-func makeGetRequest(apiURL string) (map[string]interface{}, error) {
+func makeGetRequest(apiURL string) ([]byte, error) {
 	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return nil, err
@@ -28,12 +27,5 @@ func makeGetRequest(apiURL string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	var response map[string]interface{}
-
-	err = json.Unmarshal(body, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	return response, nil
+	return body, nil
 }

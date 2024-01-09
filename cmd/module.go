@@ -42,10 +42,24 @@ var moduleCmd = &cobra.Command{
 			BackendType:       backend,
 		}
 
-		err = tfmodule.CreateModule(createModuleOptions)
+		fullModulePath, err := tfmodule.CreateModuleDir(createModuleOptions)
 		if err != nil {
 			return err
 		}
+		defaultFiles, err := tfmodule.CreateDefaultModuleFiles(fullModulePath)
+		if err != nil {
+			return fmt.Errorf("error creating moduleName files: %w", err)
+		}
+		err = tfmodule.PopulateVersionsFile(defaultFiles[tfmodule.VersionsFile], createModuleOptions)
+		if err != nil {
+			return fmt.Errorf("error populating the versions.tf file: %w", err)
+		}
+
+		defer func() {
+			for _, file := range defaultFiles {
+				_ = file.Close()
+			}
+		}()
 		return nil
 	},
 }

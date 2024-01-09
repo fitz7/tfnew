@@ -1,0 +1,30 @@
+name: Release
+on:
+  workflow_run:
+    workflows: 
+      - Checks
+    branches: 
+      - main
+    types:
+      - completed
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: go-with-cache
+        uses: magnetikonline/action-golang-cache@v4
+        with:
+          go-version-file: go.mod
+      - run: make install-tools
+      - uses: go-semantic-release/action@v1
+        with:
+          bin: ./bin/semantic-release
+          hooks: goreleaser
+          allow-initial-development-versions: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
